@@ -90,8 +90,8 @@ int main()
 {
 	string process;
 	char choice;
-	cout << " Enter Process Name To Hide" << endl << "--> ";
-    cin >> process;
+	// cout << " Enter Process Name To Hide" << endl << "--> ";
+    // cin >> process;
 	cout << " Hide this Console? (y/n)" << endl << "-->";
 	// This Will Hide the Console Window, The Program Will Still Run in Background and will be hidden from TaskManager too !! 
 	cin >> choice;
