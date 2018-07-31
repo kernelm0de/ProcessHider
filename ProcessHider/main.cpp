@@ -60,7 +60,9 @@ bool set_nt_hook()
 }
 
 void get_process_name() {
+	//
 	// TODO: Access Shared Memory (File Mapping) and Retrieve name of process to hide
+	//
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
